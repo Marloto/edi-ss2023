@@ -1,0 +1,17 @@
+GET http://localhost:8080/register/test/ich HTTP/1.1
+
+###
+
+GET http://localhost:8080/broadcast/test/Message1 HTTP/1.1
+
+###
+
+GET http://localhost:8080/broadcast/test/Message2 HTTP/1.1
+
+###
+
+GET http://localhost:8080/broadcast/test/Message3 HTTP/1.1
+
+###
+
+GET http://localhost:8080/load/test/ich HTTP/1.1

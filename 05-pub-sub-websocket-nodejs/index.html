@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hello WebSocket</title>
+</head>
+
+<body>
+    <input id="input" onkeypress="handleEnter()"><button onclick="send()">Send</button>
+    <div id="output"></div>
+    <script>
+        const websocketPath = "ws://localhost:7071/somepath"
+        const socket = new WebSocket(websocketPath);
+
+        socket.onopen = function (e) {
+            console.log(`Connected to ${websocketPath}`);
+        };
+
+        socket.onmessage = function (event) {
+            try {
+                const el = document.createElement("div");
+                el.innerHTML = event.data;
+                document.getElementById('output').appendChild(el);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        socket.onclose = function (event) {
+            if (event.wasClean) {
+                console.log(`Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+            } else {
+                console.log('Connection died');
+            }
+        };
+
+        socket.onerror = function (error) {
+            console.log(`Error in websocket connection: ${error.message}`);
+        };
+
+        function send() {
+            socket.send(JSON.stringify({ message: document.getElementById('input').value }));
+            document.getElementById('input').value = "";
+        }
+        function handleEnter() {
+            if (event.keyCode == 13) {
+                send();
+            }
+        }
+    </script>
+</body>
+
+</html>

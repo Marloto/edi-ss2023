@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello WebSocket</title>
+</head>
+<body>
+<script>
+(function(window) {
+    const websocketPath = "ws://localhost:8080/"
+    const socket = new WebSocket(websocketPath);
+        
+    socket.onopen = function(e) {
+        console.log(`Connected to ${websocketPath}`);
+    };
+
+    socket.onmessage = function(event) {
+        try {
+            console.log(event.data);
+        } catch(err) {
+            console.error(err);
+        }
+    };
+
+    socket.onclose = function(event) {
+        if (event.wasClean) {
+            console.log(`Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        } else {
+            console.log('Connection died');
+        }
+        reconnect();
+    };
+
+    socket.onerror = function(error) {
+        console.log(`Error in websocket connection: ${error.message}`);
+    };
+})(window);
+</script>
+</body>
+</html>
