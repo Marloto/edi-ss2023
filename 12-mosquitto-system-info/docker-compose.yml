@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - data:/mosquitto/data
+      - log:/mosquitto/log
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - 1883:1883
+      - 9001:9001
+    restart: unless-stopped
+  client1:
+    build:
+      context: ./system-info
+    ports:
+      - 3001:3000
+    environment:
+      - MQTT_HOST=mqtt://mosquitto:1883
+  client2:
+    build:
+      context: ./system-info
+    ports:
+      - 3002:3000
+    environment:
+      - MQTT_HOST=mqtt://mosquitto:1883
+  client3:
+    build:
+      context: ./system-info
+    ports:
+      - 3003:3000
+    environment:
+      - MQTT_HOST=mqtt://mosquitto:1883
+
+volumes:
+  data:
+  log:

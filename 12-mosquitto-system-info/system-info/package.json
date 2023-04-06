@@ -1,0 +1,19 @@
+{
+  "name": "sources",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "DEBUG=system-info:* node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "debug": "^4.3.4",
+    "express": "^4.18.2",
+    "mqtt": "^4.3.7",
+    "os-utils": "^0.0.14",
+    "wait-port": "^1.0.4"
+  }
+}
