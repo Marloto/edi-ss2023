@@ -1,0 +1,7 @@
+.DS_Store
+target
+.settings
+.classpath
+.project
+bin
+19-shop-example-complete
