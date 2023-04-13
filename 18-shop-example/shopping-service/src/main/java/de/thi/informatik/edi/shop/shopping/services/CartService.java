@@ -3,6 +3,7 @@ package de.thi.informatik.edi.shop.shopping.services;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.hibernate.annotations.common.util.impl.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import de.thi.informatik.edi.shop.shopping.repositories.CartRepository;
 
 @Service
 public class CartService {
+	
 	@Value("${cart.topic:cart}")
 	private String topic;
 	
@@ -55,5 +57,12 @@ public class CartService {
 		}
 		CartEntry entry = cart.get().deleteArticle(article);
 		this.carts.save(cart.get());
+	}
+
+	public void cartFinished(UUID id) {
+		Optional<Cart> cart = this.getCart(id);
+		if(cart.isEmpty()) {
+			throw new IllegalArgumentException("Element with ID " + id.toString() + " not found");
+		}
 	}
 }

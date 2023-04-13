@@ -43,3 +43,7 @@ _Tip: Pressing Alt+Shift+F in checkout will fill up the form with dummy data_
 - Apache Kafka / Zookeeper
 - Warehouse Sensor Service
 - Client Simulator
+
+## Issues
+
+Linux does not have `host.docker.internal` by default, you can try to use the docker-compose-linux.yml by replacing the other one; if this failes as well change volume binding `./load-balancer/default.conf:/etc/nginx/conf.d/default.conf` to `./load-balancer/default.conf:/etc/nginx/conf.d/fallback.conf` in `docker-compose.yml`

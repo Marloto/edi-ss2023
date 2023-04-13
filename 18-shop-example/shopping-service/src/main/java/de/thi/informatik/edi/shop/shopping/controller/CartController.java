@@ -19,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import de.thi.informatik.edi.shop.shopping.controller.dto.AddArticleRequest;
 import de.thi.informatik.edi.shop.shopping.controller.dto.CartResponse;
 import de.thi.informatik.edi.shop.shopping.controller.dto.CreateCartRequest;
+import de.thi.informatik.edi.shop.shopping.controller.dto.FinishCartRequest;
 import de.thi.informatik.edi.shop.shopping.model.Cart;
 import de.thi.informatik.edi.shop.shopping.services.CartService;
 
@@ -55,6 +56,16 @@ public class CartController {
 	public ResponseEntity<?> deleteArticleFromCart(@PathVariable String id, @PathVariable String article) {
 		try {			
 			this.carts.deleteArticle(UUID.fromString(id),  UUID.fromString(article));
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		} catch(Exception e) {			
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+	}
+	
+	@PostMapping("/{id}/finish")
+	public ResponseEntity<?> finishCart(@PathVariable String id, @RequestBody FinishCartRequest req) {
+		try {			
+			this.carts.cartFinished(UUID.fromString(id));
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 		} catch(Exception e) {			
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
