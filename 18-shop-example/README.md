@@ -22,6 +22,17 @@ It is also recommended to load `shopping-service`, `checkout-service`, `payment-
 - Remove all containers: `docker compose down`
 - Remove all containers, incl. collected data: `docker compose down -v`
 
+Additionally you need to start the Application-Classes in required services (for full test, all of them): `shopping-service`, `checkout-service`, `payment-service`, and `warehouse-service`.
+
+Alternatively, you can go into the respective folder and use `mvn spring-boot:run`.
+
+## Usage
+
+- Start shopping by opening http://localhost:12345/shopping/shop
+- You can by pass the shop and directly jump into the checkout by going to: http://localhost:12345/checkout/start/dummy
+
+_Tip: Pressing Alt+Shift+F in checkout will fill up the form with dummy data_
+
 ## Services
 
 - Shopping service
