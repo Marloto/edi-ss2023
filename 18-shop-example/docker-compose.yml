@@ -38,6 +38,12 @@ services:
     restart: unless-stopped
     environment:
       - MQTT_HOST=mqtt://mosquitto:1883
+  simulator:
+    build: 
+      context: client-simulator
+    restart: unless-stopped
+    environment:
+      - SHOP_BASE=http://nginx:12345
   nginx:
     image: nginx
     volumes:
