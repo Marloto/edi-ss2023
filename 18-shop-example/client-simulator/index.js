@@ -37,6 +37,11 @@ async function loadCart(cart) {
     return res.data;
 }
 
+async function finish(cart) {
+    const res = await axios.post(cart + "/finish", {});
+    return res.data;
+}
+
 async function addToCart(cart, article) {
     const res = await axios.post(cart + "/article", {article});
     return res.data;
@@ -90,6 +95,7 @@ class Customer {
         this.enqueueViewShop();
         this.enqueueCreateCart();
         this.enqueueShopping();
+        this.enqueueFinishCart();
         this.enqueueCheckout();
         this.enqueueUpdateOrder();
         this.enqueueLoadOrder();
@@ -130,6 +136,13 @@ class Customer {
             await addToCart(client.cartLocation, article.id);
             client.cart = await loadCart(client.cartLocation);
             client.log(`Added article ${article.id} to cart`);
+        }, true);
+    }
+
+    enqueueFinishCart() {
+        this.enqueue(async (client) => {
+            await addToCart(client.cartLocation);
+            client.log(`Cart finished, want to checkout...`);
         }, true);
     }
 
