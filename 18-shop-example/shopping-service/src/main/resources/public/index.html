@@ -47,6 +47,12 @@
                 }, "POST", {})
             }
 
+            function finishCart(cb) {
+                send(cartBase + '/finish', (id) => {
+                    cb();
+                }, "POST", {})
+            }
+
             function loadCart(cb) {
                 send(cartBase, (resp) => {
                     const cart = document.querySelector('#cart');
@@ -61,7 +67,7 @@
                         buy.classList.add("btn", "btn-primary");
                         buy.innerHTML = `Checkout Cart for ${resp.price}&nbsp;€`;
                         buy.addEventListener("click", () => {
-                            window.location.href = `http://localhost:12345/checkout/do/${cartBase.substring(cartBase.lastIndexOf("/"))}`;
+                            finishCart(() => window.location.href = `http://localhost:12345/checkout/do/${cartBase.substring(cartBase.lastIndexOf("/"))}`);
                         });
                         cart.append(buy);
                     }
