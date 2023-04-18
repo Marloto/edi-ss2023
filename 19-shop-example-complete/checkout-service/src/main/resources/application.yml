@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: checkout-service
+
+server:
+  port: 8081
