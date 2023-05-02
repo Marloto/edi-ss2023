@@ -39,7 +39,7 @@
         Plotly.react('temp', [temp], {title: {text: 'Temperature'}});
         Plotly.react('humi', [humi], {title: {text: 'Humidity'}});
 
-        ws = new WebSocket('ws://localhost:8080/name');
+        ws = new WebSocket('ws://localhost:8080/data');
         ws.onmessage = function (data) {
             //document.querySelector("#output").innerHTML += `${data.data}`;
             const measure = JSON.parse(data.data);
