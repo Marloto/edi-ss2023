@@ -1,0 +1,8 @@
+version: "3"
+services:
+  data:
+    build:
+      context: data-server
+    ports:
+      - 3000:3000
+    restart: unless-stopped

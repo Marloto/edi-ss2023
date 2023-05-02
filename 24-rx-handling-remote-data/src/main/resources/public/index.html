@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .container {
+            display: flex;
+        }
+        #temp, #humi {
+            max-width: 50vw;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="temp"></div>
+        <div id="humi"></div>
+    </div>
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js" charset="utf-8"></script>
+    <script>
+        var count = 0;
+        var temp = {
+            x: [],
+            y: [],
+            type: 'scatter'
+        };
+
+        var humi = {
+            x: [],
+            y: [],
+            type: 'scatter'
+        };
+
+        Plotly.react('temp', [temp], {title: {text: 'Temperature'}});
+        Plotly.react('humi', [humi], {title: {text: 'Humidity'}});
+
+        ws = new WebSocket('ws://localhost:8080/name');
+        ws.onmessage = function (data) {
+            //document.querySelector("#output").innerHTML += `${data.data}`;
+            const measure = JSON.parse(data.data);
+            temp.x.push(count);
+            temp.y.push(measure.temperature);
+            humi.x.push(count);
+            humi.y.push(measure.humidity);
+            count ++;
+            Plotly.redraw('temp');
+            Plotly.redraw('humi');
+        }
+    </script>
+</body>
+
+</html>
