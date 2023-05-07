@@ -13,15 +13,32 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.annotation.PostConstruct;
+import reactor.core.publisher.Flux;
+
 @Service
 public class SocketHandler extends TextWebSocketHandler {
 	
 	List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
 	
 	private CollectData data;
+
+	private Flux<Measurement> dataFlux;
 	
 	public SocketHandler(@Autowired CollectData data) {
 		this.data = data;
+	}
+	
+	@PostConstruct
+	public void init() {
+		dataFlux = this.data.find();
+		dataFlux
+			.map(this::toJson)
+			.subscribe(mess -> {
+			sessions.stream()
+				.filter(sess -> sess.isOpen())
+				.forEach(sess -> send(sess, mess));
+		});
 	}
 	
 	private String toJson(Object obj) {
@@ -46,10 +63,15 @@ public class SocketHandler extends TextWebSocketHandler {
 
 	public void handleTextMessage(WebSocketSession session, TextMessage message)
 			throws InterruptedException, IOException {
-		
+		// anmeldung verwenden... 
+		// -> kann darauf verzichtet werden
 	}
 
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 		sessions.add(session);
+		
+//		dataFlux.subscribe(mess -> {
+//			send(session, toJson(mess));
+//		});
 	}
 }
