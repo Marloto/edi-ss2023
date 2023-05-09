@@ -65,4 +65,4 @@ volumes:
   kafka_data:
   mosquitto_data:
   mosquitto_log:
-  node_red_data:
+  mongo_data:
