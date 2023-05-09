@@ -7,6 +7,12 @@ services:
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     restart: unless-stopped
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
   kafka:
     image: 'bitnami/kafka:3.4'
     ports:
@@ -54,14 +60,6 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  node-red:
-    image: nodered/node-red:latest
-    environment:
-      - TZ=Europe/Amsterdam
-    ports:
-      - "1880:1880"
-    volumes:
-      - node_red_data:/data
 
 volumes:
   kafka_data:
