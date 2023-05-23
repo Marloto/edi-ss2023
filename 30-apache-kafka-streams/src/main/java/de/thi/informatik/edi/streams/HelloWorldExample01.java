@@ -5,6 +5,7 @@ import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 
@@ -13,6 +14,12 @@ public class HelloWorldExample01 {
 	public static void main(String[] args) {
 		StreamsBuilder builder = new StreamsBuilder();
 
+		
+		builder.stream("hello-world")
+				.map((key, value) -> KeyValue.pair(key, "Hello, " + value))
+				.to("hello-world-answer");
+		
+		
 		
 		Properties config = new Properties();
 		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "dev1");
