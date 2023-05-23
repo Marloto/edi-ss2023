@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: shopping-service
+  data:
+    mongodb:
+      database: shopping
+      uuid-representation: standard
+server:
+  port: 8080
+

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Pay Your Order</h1>
+        <div class="collapse show" id="wait">
+            <p class="text-center">Please wait...</p>
+        </div>
+        <div class="collapse" id="payed">
+            <p class="text-center">This order is payed!</p>
+            <div class="d-grid gap-2">
+                <div class="btn-group" role="group" aria-label="Back and Pay">
+                    <button class="btn btn-primary btn-lg" id="order-details-button">Show Order Details</button>
+                </div>
+            </div>
+        </div>
+        <div class="collapse" id="paying">
+            <p class="text-center">Paying in progress...</p>
+        </div>
+        <div class="collapse" id="information">
+            <div class="d-grid gap-2">
+                <div class="btn-group" role="group" aria-label="Back and Pay">
+                    <button class="btn btn-secondary btn-lg" id="back-button">Back</button>
+                    <button class="btn btn-primary btn-lg" id="pay-button">Pay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            let paymentUuid;
+            let checkoutBaseUrl;
+            function loadPaymentByOrder(callback) {
+                const uuid = location.href.substr(location.href.lastIndexOf('/'));
+                send('order' + uuid, (order) => {
+                    paymentUuid = order.payment;
+                    console.log(`Found payment ${order.payment} for order ${uuid}`);
+                    callback(order);
+                });
+            }
+
+            function config(cb) {
+                if (location.port == 8082) {
+                    checkoutBaseUrl = window.location.protocol + "//localhost:8081";
+                } else {
+                    checkoutBaseUrl = window.location.protocol + "//localhost:" + location.port;
+                }
+                cb();
+            }
+
+            function handlePaymentLoaded(payment, callback) {
+                if (payment.status == 'PAYABLE') {
+                    const container = document.getElementById('information');
+                    const output = document.createElement('div');
+                    output.innerHTML = `<p><b>Invoice:</b><br>${payment.firstName || ""} ${payment.lastName || ""}<br>${payment.street || ""}<br>${payment.zipCode || ""} ${payment.city || ""}</p><p><p><b>Overall:</b><br>Price: ${Math.round((payment.price + Number.EPSILON) * 100) / 100}&nbsp;€</p>`;
+                    container.prepend(output);
+                    new bootstrap.Collapse(document.getElementById("wait")).hide();
+                    new bootstrap.Collapse(document.getElementById("information")).show();
+                    callback(payment);
+                } else if (payment.status == 'PAYED') {
+                    new bootstrap.Collapse(document.getElementById("wait")).hide();
+                    new bootstrap.Collapse(document.getElementById("payed")).show();
+                    callback(payment);
+                } else {
+                    window.setTimeout(() => loadPayment(callback), 1000);
+                }
+            }
+
+            function loadPayment(callback) {
+                send('payment/' + paymentUuid, (payment) => handlePaymentLoaded(payment, callback));
+            }
+
+            function goToOrder() {
+                const uuid = location.href.substr(location.href.lastIndexOf('/'));
+                window.location.href = `${checkoutBaseUrl}/checkout/view${uuid}`;
+            }
+
+            document.getElementById('pay-button').addEventListener('click', () => {
+                new bootstrap.Collapse(document.getElementById("information")).hide();
+                new bootstrap.Collapse(document.getElementById("paying")).show();
+                send('payment/' + paymentUuid + '/pay', (payment) => {
+                    goToOrder();
+                }, 'POST', {});
+            });
+
+            document.getElementById('order-details-button').addEventListener('click', () => goToOrder());
+
+            document.getElementById('back-button').addEventListener('click', () => goToOrder());
+
+            config(() =>
+                loadPaymentByOrder(() => 
+                    loadPayment((payment) => console.log(`Payment ${payment.id} loaded.`))));
+        })("/payment/api/v1");
+    </script>
+</body>
+
+</html>

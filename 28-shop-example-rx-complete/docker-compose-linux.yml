@@ -1,0 +1,68 @@
+version: "3"
+services:
+  zookeeper:
+    image: 'bitnami/zookeeper:3.8'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: unless-stopped
+  mongodb:
+    image: mongo:6-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+  kafka:
+    image: 'bitnami/kafka:3.4'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ENABLE_KRAFT=no
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/bitnami/kafka
+    restart: unless-stopped
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+      - ./iot-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - 1883:1883
+      - 9001:9001
+    restart: unless-stopped
+  warehouse-sensor:
+    build: 
+      context: warehouse-sensor-service
+    restart: unless-stopped
+    environment:
+      - MQTT_HOST=mqtt://mosquitto:1883
+  simulator:
+    build: 
+      context: client-simulator
+    restart: unless-stopped
+    environment:
+      - SHOP_BASE=http://nginx:12345
+  nginx:
+    image: nginx
+    volumes:
+      - ./load-balancer/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "12345:12345"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  kafka_data:
+  mosquitto_data:
+  mosquitto_log:
+  mongo_data:

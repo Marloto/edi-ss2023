@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: payment-service
+  data:
+    mongodb:
+      database: payment
+      uuid-representation: standard
+
+server:
+  port: 8082
