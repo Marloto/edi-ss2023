@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: checkout-service
+  data:
+    mongodb:
+      database: checkout
+      uuid-representation: standard
+
+server:
+  port: 8081

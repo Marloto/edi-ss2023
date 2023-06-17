@@ -6,6 +6,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 
 public class App {
 	public static void main(String[] args) {
@@ -16,7 +17,9 @@ public class App {
 		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Void().getClass());
 		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
-		KafkaStreams streams = new KafkaStreams(LeaderboardTopology.build(), config);
+		Topology build = LeaderboardTopology.build();
+		System.out.println(build.describe());
+		KafkaStreams streams = new KafkaStreams(build, config);
 		streams.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(streams::close));

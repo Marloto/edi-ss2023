@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class Configurator {
 	private static Logger logger = LoggerFactory.getLogger(Configurator.class);
 	
-	private static final int PARTITIONS = 1;
+	private static final int PARTITIONS = 10;
 	public static final String PRODUCTS = "products";
 	public static final String PLAYERS = "players";
 	public static final String SCORE_EVENTS = "score-events";

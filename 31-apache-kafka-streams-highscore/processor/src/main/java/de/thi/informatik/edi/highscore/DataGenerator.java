@@ -47,7 +47,7 @@ public class DataGenerator {
 			ScoreEvent event = new ScoreEvent(
 					players.get((int)Math.floor(players.size() * Math.random())).getId(),
 					products.get((int)Math.floor(products.size() * Math.random())).getId(),
-					Math.random() * 1000 + 1000
+					Math.random() * 1000
 			);
 			records.accept(event);
 			Thread.sleep(1000);

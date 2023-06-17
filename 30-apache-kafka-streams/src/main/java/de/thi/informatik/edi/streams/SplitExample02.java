@@ -16,6 +16,14 @@ public class SplitExample02 {
 	public static void main(String[] args) {
 		StreamsBuilder builder = new StreamsBuilder();
 
+		Map<String, KStream<Void, String>> map = builder.<Void, String>stream("hello-world")
+			.split(Named.as("Branch-"))
+				.branch((key, value) -> !value.isBlank(), Branched.as("A"))
+				.defaultBranch(Branched.as("B"));
+		
+		map.get("Branch-A").to("hello-world-answer");
+		map.get("Branch-B").to("hello-world-failed");
+		
 
 		Properties config = new Properties();
 		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "dev1");

@@ -38,6 +38,8 @@ public class PatientMonitoringTopology {
 		        builder.stream(Configurator.BODY_TEMP_EVENTS, Consumed.with(Serdes.String(), JsonSerdes.bodyTemp())
 			            .withTimestampExtractor(new VitalTimestampExtractor()));
 		
+		// Kleine Fenster -> bei zu hoher Latenz könnten ungünstig viele Ereignisse raus fallen
+		// Große Fenster  -> es muss lange gewartet werden, bis das Ergebnis errechnet werden kann
 		TimeWindows window = TimeWindows.ofSizeAndGrace(Duration.ofSeconds(60), Duration.ofSeconds(5));
 		KTable<Windowed<String>, Long> pulseCounts =
 		        pulseEvents

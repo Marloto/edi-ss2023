@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: warehouse-service
+  data:
+    mongodb:
+      database: warehouse
+      uuid-representation: standard
+
+server:
+  port: 8083

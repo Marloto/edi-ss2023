@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container" id="shippings">
+        <h1>Shippings</h1>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            // https://stackoverflow.com/a/52171480
+            const cyrb53 = (str, seed = 0) => {
+                let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+                for(let i = 0, ch; i < str.length; i++) {
+                    ch = str.charCodeAt(i);
+                    h1 = Math.imul(h1 ^ ch, 2654435761);
+                    h2 = Math.imul(h2 ^ ch, 1597334677);
+                }
+                h1  = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+                h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+                h2  = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+                h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            
+                return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+            };
+
+            function loadShippings() {
+                send('shipping', (list) => {
+                    const target = document.querySelector('#shippings');
+                    (list || []).forEach(shipping => {
+                        const hash = cyrb53(JSON.stringify(shipping));
+                        let container = target.querySelector('[data-shipping="' + shipping.id +'"]');
+                        if(!container) {
+                            container = document.createElement('div');
+                            container.setAttribute('data-shipping', shipping.id);
+                            container.classList.add('cart');
+                            container.append(document.createElement('p'));
+                            container.append(document.createElement('ul'));
+                            let button = document.createElement('button');
+                            button.innerText = "Ship this Order";
+                            button.classList.add('btn','btn-primary');
+                            button.addEventListener('click', () => {
+                                send(`shipping/${shipping.id}/ship`, () => console.log('shipped ' + shipping.id), 'POST', {});
+                                button.disabled = true;
+                            });
+                            container.append(button);
+                            container.append(document.createElement('hr'));
+                            target.append(container);
+                        }
+                        if(container.getAttribute('data-shipping-hash') != hash) {
+                            container.querySelector('p').innerHTML = `Adress: ${shipping.firstName || ""} ${shipping.lastName || ""}, ${shipping.street || ""}, ${shipping.zipCode || ""} ${shipping.city || ""}`;
+                            container.querySelector('ul').innerHTML = shipping.items.map(el => `<li>${el.count}x ${el.article}</li>`).join("");
+                            container.setAttribute('data-shipping-hash', hash);
+                        }
+                        if(shipping.status == 'SHIPPED') {
+                            container.querySelector('p').style.opacity = '0.5';
+                            container.querySelector('ul').style.opacity = '0.5';
+                            container.querySelector('button').style.display = 'none';
+                        }
+                    })
+                });
+            }
+
+            window.setInterval(loadShippings, 3000);
+            loadShippings();
+        })("/warehouse/api/v1");
+    </script>
+</body>
+</html>

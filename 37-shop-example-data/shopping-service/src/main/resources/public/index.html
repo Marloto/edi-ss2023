@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Shop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+
+    <style>
+        .stock, .empty {
+            color: lightgray;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Fancy Shop</h1>
+    </div>
+    <hr>
+    <div class="container" id="articles"></div>
+    <hr>
+    <div class="container mb-5">
+        <h2>Shopping Cart</h2>
+        <ul class="list-group" id="cart"></ul>
+        <p class="empty">Add articles if you want to buy some...</p>
+    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            let cartBase;
+            let checkoutBaseUrl;
+            const names = {};
+            function createCart(cb) {
+                send('cart', (id) => {
+                    cartBase = id;
+                    console.log(`${cartBase} created`);
+                    loadCart(cb);
+                }, "POST", {})
+            }
+
+            function config(cb) {
+                if (location.port == 8080) {
+                    checkoutBaseUrl = window.location.protocol + "//localhost:8081";
+                } else {
+                    checkoutBaseUrl = window.location.protocol + "//localhost:" + location.port;
+                }
+                cb();
+            }
+
+            function finishCart(cb) {
+                send(cartBase + '/finish', (id) => {
+                    cb();
+                }, "POST", {})
+            }
+
+            function loadCart(cb) {
+                send(cartBase, (resp) => {
+                    const cart = document.querySelector('#cart');
+                    cart.innerHTML = "";
+                    (resp.articles || []).forEach(el => {
+                        let container = document.createElement("li");
+                        container.classList.add("list-group-item");
+                        container.innerHTML = `${el.count}x ${el.name} for ${Math.round(((el.price * el.count) + Number.EPSILON) * 100) / 100}&nbsp;€`;
+                        cart.appendChild(container);
+                    });
+                    if (resp.price > 0) {
+                        const buy = document.createElement("button");
+                        buy.classList.add("btn", "btn-primary", "mt-3");
+                        buy.innerHTML = `Checkout Cart for ${Math.round((resp.price + Number.EPSILON) * 100) / 100}&nbsp;€`;
+                        buy.addEventListener("click", () => {
+                            finishCart(() => window.location.href = `${checkoutBaseUrl}/checkout/do${cartBase.substring(cartBase.lastIndexOf("/"))}`);
+                        });
+                        cart.append(buy);
+                        cart.parentElement.querySelector('.empty').style.display = "none";
+                    } else {
+                        cart.parentElement.querySelector('.empty').style.display = "";
+                    }
+                    cb && cb();
+                })
+            }
+
+            function addToCart(article) {
+                send(cartBase + "/article", () => {
+                    const container = document.createElement("div");
+                    container.classList.add("toast", "align-items-center", "text-bg-secondary", "border-0");
+                    container.setAttribute("role", "alert");
+                    container.setAttribute("aria-live", "assertive");
+                    container.setAttribute("aria-atomic", "true");
+                    container.innerHTML = `<div class="d-flex"><div class="toast-body">Add 1x ${article.name} for ${article.price}&nbsp;€</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+                    document.querySelector(".toast-container").append(container);
+                    window.setTimeout(() =>
+                        bootstrap.Toast.getOrCreateInstance(container).show());
+                    loadCart();
+                }, "POST", { "article": article.id })
+            }
+
+            function loadStocks() {
+                send("stock", (list) => {
+                    (list || []).forEach(el => {
+                        // Find div with id and span with class stock
+                        const stockContainer = document.querySelector(`[data-article-id="${el.article}"] .stock`);
+                        if (stockContainer) {
+                            // Update value in span-tag
+                            stockContainer.innerHTML = `(Stock: ${el.stock})`;
+                        }
+                    });
+                })
+            }
+
+            // Reload stock every 5s
+            window.setInterval(loadStocks, 5000);
+
+            config(() =>
+                createCart(() =>
+                    send('article', (list) => (list || []).forEach((el) => {
+                        const container = document.createElement("div");
+                        container.classList.add('mt-3', 'mb-3');
+                        container.setAttribute('data-article-id', el.id);
+                        container.innerHTML = `<p id="${el.id}"><h2>${el.name}</h2><br>${el.description} <span class="stock"></span></p>`;
+                        const add = document.createElement("button");
+                        add.classList.add("btn", "btn-primary");
+                        add.innerHTML = `Add to Cart for ${el.price}&nbsp;€`;
+                        add.addEventListener("click", () => addToCart(el));
+                        container.append(add);
+                        document.querySelector('#articles').appendChild(container);
+                        names[el.id] = el.name;
+                        loadStocks();
+                    }))));
+        })("/shopping/api/v1");
+    </script>
+</body>
+
+</html>

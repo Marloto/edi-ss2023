@@ -19,27 +19,27 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/v1/person")
 public class PersonEndpoint {
-	private PersonService persons;
+    private PersonService persons;
 
-	public PersonEndpoint(@Autowired PersonService persons) {
-		this.persons = persons;
-	}
+    public PersonEndpoint(@Autowired PersonService persons) {
+        this.persons = persons;
+    }
 
-	@GetMapping
-	public Flux<PersonResponse> listAll() {
-		return this.persons.listAll()
-				.map(PersonResponse::fromPerson);
-	}
+    @GetMapping
+    public Flux<PersonResponse> listAll() {
+        return this.persons.listAll()
+                .map(PersonResponse::fromPerson);
+    }
 
-	@GetMapping("/{id}")
-	public Mono<PersonResponse> getById(@PathVariable UUID id) {
-		return this.persons.getById(id)
-				.map(PersonResponse::fromPerson);
-	}
+    @GetMapping("/{id}")
+    public Mono<PersonResponse> getById(@PathVariable UUID id) {
+        return this.persons.getById(id)
+                .map(PersonResponse::fromPerson);
+    }
 
-	@PostMapping()
-	public Mono<PersonResponse> getById(@RequestBody PersonRequest person) {
-		return this.persons.create(person.getName())
-				.map(PersonResponse::fromPerson);
-	}
+    @PostMapping()
+    public Mono<PersonResponse> getById(@RequestBody PersonRequest person) {
+        return this.persons.create(person.getName())
+                .map(PersonResponse::fromPerson);
+    }
 }

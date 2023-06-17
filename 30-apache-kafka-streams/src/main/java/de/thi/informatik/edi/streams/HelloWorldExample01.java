@@ -8,6 +8,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 
 public class HelloWorldExample01 {
 
@@ -15,9 +16,7 @@ public class HelloWorldExample01 {
 		StreamsBuilder builder = new StreamsBuilder();
 
 		
-		builder.stream("hello-world")
-				.map((key, value) -> KeyValue.pair(key, "Hello, " + value))
-				.to("hello-world-answer");
+		builder.stream("hello-world").foreach((key, value) -> System.out.println("Hello, " + value));
 		
 		
 		
@@ -28,7 +27,9 @@ public class HelloWorldExample01 {
 		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Void().getClass());
 		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
-		KafkaStreams streams = new KafkaStreams(builder.build(), config);
+		Topology build = builder.build();
+		
+		KafkaStreams streams = new KafkaStreams(build, config);
 		streams.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
