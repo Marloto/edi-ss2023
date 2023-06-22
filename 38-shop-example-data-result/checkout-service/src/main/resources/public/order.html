@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Order Details</h1>
+        <div class="collapse show" id="wait">
+            <p class="text-center">Please wait...</p>
+        </div>
+        <div class="collapse" id="information">
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            function loadOrder(callback) {
+                const uuid = location.href.substr(location.href.lastIndexOf('/'));
+                send(`order${uuid}`, (data) => {
+                    if(data.status == 'PLACED' || data.status == 'CREATED') {
+                        window.setTimeout(() => loadOrder(callback), 1000);
+                    } else {
+                        callback(data);
+                    }
+                });
+            }
+
+            window.setTimeout(() => 
+                loadOrder((data) => {
+                    new bootstrap.Collapse(document.getElementById("wait")).hide();
+                    new bootstrap.Collapse(document.getElementById("information")).show();
+                    const container = document.createElement('div');
+                    container.innerHTML = `<p><b>Address</b><br>${data.firstName} ${data.lastName}<br>${data.street}<br>${data.zipCode} ${data.city}</p><p><b>Items:</b></p><ul>${data.items.map(el => `<li>${el.count}x ${el.name} for ${Math.round(((el.count * el.price) + Number.EPSILON) * 100) / 100}&nbsp;€</li>`).join('')}</ul><p><b>Overall:</b><br>Price: ${Math.round((data.items.map(el => el.count * el.price).reduce((a, b) => a + b, 0) + Number.EPSILON) * 100) / 100}&nbsp;€</p><p><b>Status: ${data.status}</b></p>`;
+                    document.getElementById('information').append(container);
+                }), 1000);
+        })("/checkout/api/v1");
+    </script>
+</body>
+
+</html>

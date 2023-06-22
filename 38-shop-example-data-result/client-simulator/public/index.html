@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator Overview</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        span.customer:hover {
+            text-decoration: underline;
+            color: black;
+        }
+
+        span.customer {
+            color: lightgray;
+        }
+
+        .hidden {
+            color: lightgray;
+        }
+
+        .hidden:hover {
+            text-decoration: underline;
+            color: black;
+        }
+    </style>
+    <style id="rules"></style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="d-grid gap-2 mt-3 mb-3">
+            <button class="btn btn-outline-secondary btn-lg" id="start-customer">Add One Customer</button>
+        </div>
+
+        <div class="input-group mb-3 mt-3">
+            <label class="input-group-text" for="inputGroupSelect01">Customers Per Second</label>
+            <input type="number" id="customers-per-second" class="form-control" placeholder="e.g., 0.1 or 1 or 10" aria-label="Number of Customers per Second" value="0.25" aria-describedby="add-per-second">
+            <button class="btn btn-outline-secondary" type="button" id="add-per-second">Start</button>
+        </div>
+
+        <div class="accordion mt-5" id="logger">
+    
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            const websocketPath = `${location.protocol == 'http:' ? 'ws' : 'wss'}://${location.host}/simulator/listen`;
+            const target = document.getElementById("log");
+            const existing = {};
+
+            const handleMessage = function(data) {
+                if(!data.id) {
+                    console.error('Could not find id in data');
+                    return;
+                }
+                if(!data.msg) {
+                    console.error('Could not find msg in data');
+                    return;
+                }
+                if (!existing[data.id]) {
+                    const item = document.createElement('div');
+                    item.classList.add(`accordion-item`);
+                    const header = document.createElement('h2');
+                    header.classList.add('accordion-header');
+                    const button = document.createElement('button');
+                    button.classList.add('accordion-button', 'collapsed');
+                    button.setAttribute('type', 'button');
+                    button.setAttribute('data-bs-toggle', 'collapse');
+                    button.setAttribute('data-bs-target', `#ref-${data.id}`);
+                    button.setAttribute('aria-expanded', 'true');
+                    button.setAttribute('aria-controls', `ref-${data.id}`);
+                    button.innerHTML = `<span class="logger-id">${data.id}</span>&nbsp;-&nbsp;<span class="logger-state">Started</span>`;
+                    const collapse = document.createElement('div');
+                    collapse.id = `ref-${data.id}`;
+                    collapse.classList.add('accordion-collapse', 'collapse');
+                    collapse.setAttribute('data-bs-parent', '#logger');
+                    const body = document.createElement('div');
+                    body.classList.add('accordion-body');
+                    item.appendChild(header);
+                    header.appendChild(button);
+                    item.appendChild(collapse);
+                    collapse.appendChild(body);
+                    document.querySelector('#logger').appendChild(item);
+                    existing[data.id] = item;
+                }
+
+                const el = document.createElement('div');
+                el.classList.add(`el-${data.id}`);
+                el.innerHTML = `${data.msg}`;
+                existing[data.id].querySelector('.accordion-body').append(el);
+
+                if(data.msg.startsWith('Starting simulation of ')) {
+                    existing[data.id].querySelector('.accordion-button .logger-id').innerHTML = `${data.msg.substring('Starting simulation of '.length)} (${data.id})`;
+                }
+                if(data.msg.startsWith('Load shop articles')) {
+                    existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Shopping";
+                }
+                if(data.msg.startsWith('Go to checkout for')) {
+                    existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Checkout";
+                }
+                if(data.msg.startsWith('Payment identifier')) {
+                    existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Paying";
+                }
+                if(data.msg.startsWith('Stopping simulation')) {
+                    existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Finished";
+                }
+                if(data.msg.startsWith('Prepare next round') || data.msg.startsWith('Check for shipping') || data.msg.startsWith('Pick up stuff')) {
+                    existing[data.id].querySelector('.accordion-button .logger-id').innerHTML = `Warehouse Worker (${data.id})`;
+                    if(data.msg.startsWith('Prepare next round')) {
+                        existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Checking Orders";
+                    }
+                    if(data.msg.startsWith('Pick up stuff')) {
+                        existing[data.id].querySelector('.accordion-button .logger-state').innerHTML = "Shipping Orders";
+                    }
+                }
+            }
+
+            var socket;
+            function connect() {
+                socket = new WebSocket(websocketPath);
+    
+                socket.onopen = function (e) {
+                    console.log(`Connected to ${websocketPath}`);
+                };
+    
+                socket.onmessage = function (event) {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                };
+    
+                socket.onclose = function (event) {
+                    if (event.wasClean) {
+                        console.log(`Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                    } else {
+                        console.log('Connection died');
+                    }
+                    window.setTimeout(() => connect(), 1000);
+                };
+    
+                socket.onerror = function (error) {
+                    console.log(`Error in websocket connection: ${error.message}`);
+                };
+            }
+
+            connect();
+
+            document.querySelector('#start-customer').addEventListener('click', () => {
+                send('start-customer', () => {});
+            });
+
+            let intervalRef = undefined;
+
+            document.querySelector('#add-per-second').addEventListener('click', () => {
+                if(intervalRef === undefined) {
+                    const c = Math.max(0.01, parseFloat(document.querySelector("#customers-per-second").value));
+                    intervalRef = window.setInterval(() => {
+                        send('start-customer', () => {});
+                    }, 1000 / c);
+                    document.querySelector('#add-per-second').innerHTML = "Stop";
+                } else {
+                    window.clearInterval(intervalRef);
+                    intervalRef = undefined;
+                    document.querySelector('#add-per-second').innerHTML = "Start";
+                }
+            });
+
+
+        })('/simulator/api/v1');
+    </script>
+</body>
+
+</html>

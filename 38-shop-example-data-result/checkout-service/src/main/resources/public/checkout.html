@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Checkout Your Order</h1>
+        <div class="collapse" id="address">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="firstname" placeholder="Your First Name">
+                <label for="firstname">First Name</label>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="lastname" placeholder="Your Last Name">
+                <label for="lastname">Last Name</label>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="street" placeholder="Some Street 123">
+                <label for="street">Street</label>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="zipcode" placeholder="12345">
+                        <label for="zipcode">Zip Code</label>
+                    </div>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="city" placeholder="Some City">
+                        <label for="city">City</label>
+                    </div>
+                </div>
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg" id="verfiy-button">Verify</button>
+            </div>
+        </div>
+        <div class="collapse" id="update">
+            <p class="text-center">Updating Order</p>
+        </div>
+        <div class="collapse" id="review">
+            
+            <div class="d-grid gap-2">
+                <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                    <button class="btn btn-secondary btn-lg" id="back-button">Back</button>
+                    <button class="btn btn-primary btn-lg" id="buy-button">Buy</button>
+                </div>
+            </div>
+        </div>
+        <div class="collapse" id="wait">
+            <p class="text-center">Placing order for payment</p>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        (function (baseUrl) {
+            function send(path, cb, method = "GET", data = undefined) {
+                const req = new XMLHttpRequest();
+                req.onreadystatechange = () => {
+                    if (req.readyState === 4 && req.status == 200) {
+                        cb(JSON.parse(req.responseText));
+                    } else if (req.readyState === 4 && req.status == 204) {
+                        cb();
+                    } else if (req.readyState === 4 && req.status == 201) {
+                        cb(req.getResponseHeader('Location'));
+                    }
+                };
+                req.open(method, path.startsWith('http') ? path : (baseUrl + "/" + path), true);
+                req.setRequestHeader('Accept', 'application/json');
+                if (data) {
+                    req.setRequestHeader('Content-Type', 'application/json');
+                }
+                req.send(data ? JSON.stringify(data) : undefined);
+            }
+
+            let orderUrl;
+            let orderId;
+            let paymentBaseUrl;
+            function loadOrder(callback) {
+                send(orderUrl, (data) => {
+                    orderId = data.id;
+                    callback(data);
+                });
+            }
+
+            function config(cb) {
+                if(location.port == 8081) {
+                    paymentBaseUrl = window.location.protocol + "//localhost:8082";
+                } else {
+                    paymentBaseUrl = window.location.protocol + "//localhost:" + location.port;
+                }
+                cb();
+            }
+
+            function updateOrder(firstName, lastName, street, zipcode, city, callback) {
+                send(orderUrl, callback, 'PATCH', {
+                    'firstName': firstName,
+                    'lastName': lastName,
+                    'street': street,
+                    'zipCode': zipcode,
+                    'city': city
+                });
+            }
+            function getOrderByCartRef(callback) {
+                const uuid = location.href.substr(location.href.lastIndexOf('/') + 1);
+                send('cart/' + uuid + '/order', (loc) => {
+                    orderUrl = loc;
+                    console.log(`Created order with location ${orderUrl}`);
+                    callback();
+                }, 'POST', {});
+            }
+            document.getElementById("verfiy-button").addEventListener('click', () => {
+                const updating = document.getElementById("update");
+                new bootstrap.Collapse(document.getElementById("address")).hide();
+                new bootstrap.Collapse(updating).show();
+                updating.addEventListener('shown.bs.collapse', () => {
+                    updateOrder(
+                        document.getElementById('firstname').value,
+                        document.getElementById('lastname').value,
+                        document.getElementById('street').value,
+                        document.getElementById('zipcode').value,
+                        document.getElementById('city').value,
+                        () => {
+                            loadOrder((data) => {
+                                const container = document.createElement('div');
+                                container.innerHTML = `<p><b>Address</b><br>${data.firstName} ${data.lastName}<br>${data.street}<br>${data.zipCode} ${data.city}</p><p><b>Items:</b></p><ul>${data.items.map(el => `<li>${el.count}x ${el.name} for ${Math.round(((el.count * el.price) + Number.EPSILON) * 100) / 100}&nbsp;€</li>`).join('')}</ul><p><b>Overall:</b><br>Price: ${Math.round((data.items.map(el => el.count * el.price).reduce((a,b) => a + b, 0) + Number.EPSILON) * 100) / 100}&nbsp;€</p>`;
+                                document.getElementById('review').prepend(container);
+                                new bootstrap.Collapse(document.getElementById("update")).hide();
+                                new bootstrap.Collapse(document.getElementById("review")).show();
+                            });
+                        }
+                    );
+                }, {once: true});
+            });
+
+            document.getElementById("back-button").addEventListener('click', () => {
+                new bootstrap.Collapse(document.getElementById("address")).show();
+                new bootstrap.Collapse(document.getElementById("review")).hide();
+            });
+
+            document.getElementById("buy-button").addEventListener('click', () => {
+                new bootstrap.Collapse(document.getElementById("review")).hide();
+                new bootstrap.Collapse(document.getElementById("wait")).show();
+                send(orderUrl + "/place-order", () => {
+                    window.location.href = `${paymentBaseUrl}/payment/pay/${orderId}`;
+                }, "POST", {})
+            });
+
+            document.addEventListener('keydown', (evt) => {
+                if (evt.shiftKey && evt.altKey && evt.keyCode == 70) {
+                    document.getElementById('firstname').value = 'Erna';
+                    document.getElementById('lastname').value = 'Musterfrau';
+                    document.getElementById('street').value = 'Somewhere 123';
+                    document.getElementById('zipcode').value = '12345';
+                    document.getElementById('city').value = 'Exampletown';
+                }
+            }, true);
+
+            config(() =>
+                getOrderByCartRef(() => {
+                    new bootstrap.Collapse(document.getElementById("address")).show();
+                }));
+        })("/checkout/api/v1");
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,155 @@
+version: "3"
+services:
+  zookeeper:
+    image: 'bitnami/zookeeper:3.8'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: unless-stopped
+  kafka:
+    image: 'bitnami/kafka:3.4'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=EXTERNAL://:9092,CLIENT://:29092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=EXTERNAL://localhost:9092,CLIENT://kafka:29092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ENABLE_KRAFT=no
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/bitnami/kafka
+    restart: unless-stopped
+  init-kafka:
+    image: 'bitnami/kafka:3.4'
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics.sh --bootstrap-server kafka:29092 --list
+
+      echo 'Creating kafka topics'
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic article --replication-factor 1 --partitions 4
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic cart --replication-factor 1 --partitions 4
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic order --replication-factor 1 --partitions 4
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic payment --replication-factor 1 --partitions 4
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic shipping --replication-factor 1 --partitions 4
+      kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic stock-changes --replication-factor 1 --partitions 4
+
+      echo 'Successfully created the following topics:'
+      kafka-topics.sh --bootstrap-server kafka:29092 --list
+      "
+
+  mongodb:
+    image: mongo:6-jammy
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+      - ./iot-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+  warehouse-sensor:
+    build: 
+      context: warehouse-sensor-service
+    restart: unless-stopped
+    environment:
+      - MQTT_HOST=mqtt://mosquitto:1883
+    depends_on:
+      - mosquitto
+  simulator:
+    build: 
+      context: client-simulator
+    restart: unless-stopped
+    environment:
+      - SHOP_BASE=http://nginx:12345
+  nginx:
+    image: nginx
+    volumes:
+      - ./load-balancer/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "12345:12345"
+    restart: unless-stopped
+    depends_on:
+      - shopping
+      - checkout
+      - payment
+      - warehouse
+      - simulator
+  shopping:
+    build:
+      context: shopping-service
+    environment:
+      - KAFKA_SERVERS=kafka:29092
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mongodb
+  checkout:
+    build:
+      context: checkout-service
+    environment:
+      - KAFKA_SERVERS=kafka:29092
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mongodb
+  payment:
+    build:
+      context: payment-service
+    environment:
+      - KAFKA_SERVERS=kafka:29092
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mongodb
+  warehouse:
+    build:
+      context: warehouse-service
+    environment:
+      - KAFKA_SERVERS=kafka:29092
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mongodb
+  warehouse-adapter:
+    build:
+      context: warehouse-adapter-spring
+    environment:
+      - KAFKA_SERVERS=kafka:29092
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017
+      - MQTT_BROKER=tcp://mosquitto:1883
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mongodb
+  # ksqldb:
+  #   image: 'confluentinc/ksqldb-server:0.28.2'
+  #   ports:
+  #     - '8088:8088'
+  #   environment:
+  #     - KSQL_BOOTSTRAP_SERVERS=kafka:29092
+  #     - KSQL_LISTENERS=http://0.0.0.0:8088/
+  #     - KSQL_KSQL_SERVICE_ID=shopping_ksql_
+  #     - KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE=true
+  #     - KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE=true
+
+volumes:
+  kafka_data:
+  mosquitto_data:
+  mosquitto_log:
+  mongo_data:
