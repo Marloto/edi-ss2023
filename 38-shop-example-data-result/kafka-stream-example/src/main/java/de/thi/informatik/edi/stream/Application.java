@@ -20,10 +20,9 @@ public class Application {
             config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
             Topology build = ShoppingTopology.build();
-            System.out.println(build.describe());
-//            KafkaStreams streams = new KafkaStreams(build, config);
-//            streams.start();
-//
-//            Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+            KafkaStreams streams = new KafkaStreams(build, config);
+            streams.start();
+
+            Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
     }
 }
